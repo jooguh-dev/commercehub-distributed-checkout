@@ -1,0 +1,87 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: commerce-rabbitmq
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  credit-card-authorizer:
+    build:
+      context: .
+      dockerfile: docker/credit-card-authorizer.Dockerfile
+    container_name: commerce-cca
+    ports:
+      - "18082:8082"
+
+  product-service:
+    build:
+      context: .
+      dockerfile: docker/product-service.Dockerfile
+    container_name: commerce-product
+    ports:
+      - "18081:8081"
+
+  product-service-bad:
+    build:
+      context: .
+      dockerfile: docker/product-service.Dockerfile
+    container_name: commerce-product-bad
+    environment:
+      PRODUCT_BAD_INSTANCE_ENABLED: "true"
+    ports:
+      - "28081:8081"
+
+  shopping-cart-service:
+    build:
+      context: .
+      dockerfile: docker/shopping-cart-service.Dockerfile
+    container_name: commerce-cart
+    ports:
+      - "18080:8080"
+    environment:
+      SERVICES_CREDIT_CARD_AUTHORIZER_BASE_URL: http://credit-card-authorizer:8082
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VIRTUAL_HOST: /
+      RABBITMQ_QUEUE: warehouse-orders
+      RABBITMQ_DEAD_LETTER_EXCHANGE: warehouse-orders.dlx
+      RABBITMQ_DEAD_LETTER_QUEUE: warehouse-orders.dlq
+      RABBITMQ_DEAD_LETTER_ROUTING_KEY: warehouse-orders
+      RABBITMQ_PUBLISH_TIMEOUT_MS: 5000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      credit-card-authorizer:
+        condition: service_started
+
+  warehouse-consumer:
+    build:
+      context: .
+      dockerfile: docker/warehouse-consumer.Dockerfile
+    container_name: commerce-warehouse
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      RABBITMQ_QUEUE: warehouse-orders
+      RABBITMQ_DEAD_LETTER_EXCHANGE: warehouse-orders.dlx
+      RABBITMQ_DEAD_LETTER_QUEUE: warehouse-orders.dlq
+      RABBITMQ_DEAD_LETTER_ROUTING_KEY: warehouse-orders
+      RABBITMQ_PREFETCH_COUNT: 100
+      WAREHOUSE_CONSUMER_THREADS: 4
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

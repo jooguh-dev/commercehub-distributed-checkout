@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf update -y
+dnf install -y docker
+systemctl enable docker
+systemctl start docker
+
+%{ if perform_ecr_login ~}
+aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${ecr_registry}
+%{ endif ~}
+
+mkdir -p /opt/commercehub
+
+cat >/opt/commercehub/run-container.sh <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+
+docker rm -f ${container_name} >/dev/null 2>&1 || true
+
+docker pull ${image_uri}
+
+docker run -d \
+  --name ${container_name} \
+  --restart unless-stopped \
+  -p ${host_port}:${container_port} \
+%{ for port in try(additional_ports, []) ~}
+  -p ${port.host}:${port.container} \
+%{ endfor ~}
+%{ for env_line in env_lines ~}
+  -e ${env_line} \
+%{ endfor ~}
+  ${image_uri}
+SCRIPT
+
+chmod +x /opt/commercehub/run-container.sh
+/opt/commercehub/run-container.sh >>/var/log/commercehub-bootstrap.log 2>&1

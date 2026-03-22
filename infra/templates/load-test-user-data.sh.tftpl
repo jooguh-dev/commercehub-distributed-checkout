@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf update -y
+dnf install -y docker
+systemctl enable docker
+systemctl start docker
+
+mkdir -p /opt/commercehub
+
+cat >/opt/commercehub/run-load-test.sh <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+
+docker pull ${image_uri}
+
+docker rm -f load-test-client >/dev/null 2>&1 || true
+
+docker run --rm --name load-test-client ${image_uri} %{ for arg in command_args ~}${arg} %{ endfor ~}
+SCRIPT
+
+chmod +x /opt/commercehub/run-load-test.sh
+
+if [ "${load_test_enabled}" = "true" ]; then
+  /opt/commercehub/run-load-test.sh >>/var/log/commercehub-load-test.log 2>&1
+fi

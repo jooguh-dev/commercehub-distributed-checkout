@@ -1,0 +1,17 @@
+.DS_Store
+.idea/
+
+target/
+build/
+out/
+
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+.env
+.env.*
+
+*.log
+

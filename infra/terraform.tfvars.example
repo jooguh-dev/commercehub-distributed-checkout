@@ -1,0 +1,29 @@
+aws_region          = "us-west-2"
+availability_zones  = ["us-west-2a", "us-west-2b"]
+admin_cidr_blocks   = ["YOUR_IP/32"]
+ssh_key_name        = null
+ami_id              = "ami-03caad32a158f72db"
+
+container_images = {
+  product_service         = "REPLACE_ME_PRODUCT_ECR_URI:latest"
+  shopping_cart_service   = "REPLACE_ME_CART_ECR_URI:latest"
+  credit_card_authorizer  = "REPLACE_ME_CCA_ECR_URI:latest"
+  warehouse_consumer      = "REPLACE_ME_WAREHOUSE_ECR_URI:latest"
+  load_test_client        = "REPLACE_ME_LOAD_TEST_ECR_URI:latest"
+  rabbitmq                = "rabbitmq:3.13-management"
+}
+
+load_test_enabled = false
+provision_load_tester = false
+
+cart_instance_count        = 1
+shopping_cart_storage_mode = "dynamodb"
+shopping_cart_table_name   = "commercehub-a3-cart-state"
+
+load_test_args = [
+  "--requests=200000",
+  "--threads=200",
+  "--product-id=1",
+  "--quantity=1",
+  "--credit-card-number=1234-5678-9012-3456"
+]

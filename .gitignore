@@ -15,3 +15,10 @@ out/
 
 *.log
 
+README.md
+assignment3_outline.md
+assignment3_report.md
+assignment3_task_checklist.md
+assignment3_tools_software.md
+infra/README.md
+infra/deploy.md
